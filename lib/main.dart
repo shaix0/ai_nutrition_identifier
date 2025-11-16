@@ -12,7 +12,8 @@ Future<void> main() async {
   );
 
   await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
-  await FirebaseAuth.instance.signInAnonymously();
+  final userCredential = await FirebaseAuth.instance.signInAnonymously();
+  print('匿名使用者登入成功，UID: ${userCredential.user?.uid}');
   runApp(const MyApp());
 }
 
