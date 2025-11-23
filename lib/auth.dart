@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
+import 'package:http/http.dart' as http;
+
+
+//final user = FirebaseAuth.instance.currentUser;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -119,6 +123,21 @@ class _LoginPageState extends State<LoginPage> {
           ],
         ),
       );
+
+      final token = await FirebaseAuth.instance.currentUser?.getIdToken(true);
+      print("TOKEN=$token");
+      /*await http.get(
+        Uri.parse("http://127.0.0.1:8000/admin"),
+        headers: {"Authorization": "Bearer $token"},
+      );*/
+      FirebaseAuth.instance
+        .authStateChanges()
+        .listen((User? user) {
+          if (user != null) {
+            print(user.uid);
+          }
+        });
+        
     } on FirebaseAuthException catch (e) {
       setState(() => isLoading = false);
       ScaffoldMessenger.of(context)

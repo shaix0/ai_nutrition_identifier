@@ -1,5 +1,9 @@
 // lib/home.dart
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+final user = FirebaseAuth.instance.currentUser;
+final uid = user?.uid ?? 'unknown_user';
 
 class NutritionDashboardApp extends StatelessWidget {
   const NutritionDashboardApp({super.key});
@@ -23,7 +27,7 @@ class DashboardPage extends StatelessWidget {
         actions: [
           IconButton(
             onPressed: () {
-              // 前往設定頁
+              Navigator.pushReplacementNamed(context, '/auth');// 前往設定頁
             },
             icon: const Icon(Icons.settings),
           ),
@@ -70,7 +74,7 @@ class DashboardPage extends StatelessWidget {
                                     color: Colors.teal, width: 10),
                               ),
                             ),
-                            const Text("脂肪 5%"),
+                            Text(uid),
                           ],
                         ),
                       ),

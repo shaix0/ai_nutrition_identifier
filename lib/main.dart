@@ -11,9 +11,9 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
-  final userCredential = await FirebaseAuth.instance.signInAnonymously();
-  print('匿名使用者登入成功，UID: ${userCredential.user?.uid}');
+  //await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
+  //final userCredential = await FirebaseAuth.instance.signInAnonymously();
+  //print('匿名使用者登入成功，UID: ${userCredential.user?.uid}');
   runApp(const MyApp());
 }
 
@@ -25,7 +25,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Firebase Auth Demo',
       theme: ThemeData(primarySwatch: Colors.blue),
-      initialRoute: '/auth',
+      initialRoute: '/admin_test',
       routes: appRoutes,
     );
   }
