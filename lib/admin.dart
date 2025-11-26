@@ -11,7 +11,7 @@ class AdminPage extends StatefulWidget {
 }
 
 class _AdminPageState extends State<AdminPage> {
-  bool? isAdminUser; // null = loading, true / false = result
+  bool? isAdmin;
 
   @override
   void initState() {
@@ -22,60 +22,41 @@ class _AdminPageState extends State<AdminPage> {
   Future<void> checkAdmin() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      setState(() => isAdminUser = false);
+      setState(() => isAdmin = false);
       return;
     }
 
-    final idToken = await user.getIdToken(true);
+    await user.getIdToken(true); // <-- 強制刷新 token！
+
+    final token = await user.getIdToken();
 
     final response = await http.get(
       Uri.parse("http://127.0.0.1:8000/admin-only"),
-      headers: {
-        "Authorization": "Bearer $idToken",
-      },
+      headers: {"Authorization": "Bearer $token"},
     );
 
-    if (response.statusCode == 200) {
-      setState(() => isAdminUser = true);
-    } else {
-      setState(() => isAdminUser = false);
-    }
+    if (!mounted) return;
+
+    setState(() => isAdmin = response.statusCode == 200);
   }
 
   @override
   Widget build(BuildContext context) {
-    // Loading 狀態
-    if (isAdminUser == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+    if (isAdmin == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    // 不是管理員 → 退回上一頁
-    if (isAdminUser == false) {
-      return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text("您沒有管理員權限"),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("返回"),
-              ),
-            ],
-          ),
-        ),
-      );
+    if (isAdmin == false) {
+      Future.microtask(() {
+        Navigator.pushReplacementNamed(context, "/");
+      });
+
+      return const Scaffold(); // 空白即可
     }
 
-    // 是管理員 → 顯示真正管理頁面
     return Scaffold(
       appBar: AppBar(title: const Text("Admin Page")),
-      body: const Center(
-        child: Text("Welcome to the Admin Page"),
-      ),
+      body: const Center(child: Text("Welcome Admin")),
     );
   }
 }
