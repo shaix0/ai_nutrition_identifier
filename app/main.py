@@ -5,7 +5,8 @@ import firebase_admin
 from firebase_admin import auth, credentials
 from firebase_admin import firestore_async
 
-from app.routes.auth import router as auth_router
+from app.routes.admin import router as admin_router
+from app.routes.settings import router as settings_router
 
 # 初始化 Firebase Admin SDK
 if not firebase_admin._apps:
@@ -14,6 +15,11 @@ if not firebase_admin._apps:
     db = firestore_async.client()
 
 app = FastAPI()
+
+origins = [
+    "http://localhost",
+    "http://localhost:8080",
+]
 
 from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
@@ -24,5 +30,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth_router, prefix="/auth")  # include the user router under /users path
+app.include_router(admin_router, prefix="/admin")  # include the user router under /users path
+app.include_router(settings_router, prefix="/settings")  # include the settings router under /settings path
 

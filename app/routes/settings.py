@@ -1,5 +1,8 @@
+from fastapi import APIRouter, Header, HTTPException
 
+router = APIRouter()
 
+@router.get("/profile/{uid}")
 def get_user_profile(uid: str):
     """
     從 Firestore users/{uid} 取得性別、身高、體重、年齡。

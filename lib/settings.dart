@@ -72,13 +72,8 @@ class _SettingsPageState extends State<SettingsPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            displayName.isEmpty ? '使用者名稱' : displayName,
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
                             ' user@example.com',
-                            style: TextStyle(color: cs.onSurface.withOpacity(0.7)),
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 6),
                           Text(

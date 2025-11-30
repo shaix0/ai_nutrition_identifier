@@ -26,7 +26,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Firebase Auth Demo',
       theme: AppTheme.theme,
-      initialRoute: '/settings',
+      initialRoute: '/auth',
       routes: appRoutes,
     );
   }

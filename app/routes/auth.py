@@ -1,9 +1,8 @@
 # https://firebase.google.com/docs/auth/admin/custom-claims?hl=zh-tw#python_3
 
 #import pyrebase
-from fastapi import FastAPI, Header, HTTPException, Depends
+from fastapi import FastAPI, APIRouter, Header, HTTPException, Depends
 from firebase_admin import auth, credentials
-from fastapi import APIRouter, Header, HTTPException
 
 router = APIRouter()
 
@@ -36,7 +35,7 @@ def set_admin(uid):
 # set_admin('ID3KnaS0WTfrabSCwWuOPCOHMKX2')
 
 # id_token comes from the client app (shown above)
-@router.post("/verify_user")
+@router.get("/verify_user")
 async def verify_user(authorization: str = Header(...)):
     token = _extract_token(authorization)
 
@@ -50,7 +49,7 @@ async def verify_user(authorization: str = Header(...)):
         raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
 
         
-@router.post("/protected")
+@router.get("/protected")
 async def protected_route(authorization: str = Header(None)):
     if not authorization:
         raise HTTPException(status_code=401, detail="Missing Authorization header")
@@ -79,70 +78,3 @@ async def protected_route(authorization: str = Header(None)):
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
 
-async def get_current_user(authorization: str = Header(...)):
-    """
-    - 驗證 Firebase ID Token
-    - 回傳 uid、是否 admin、claims
-    """
-    id_token = _extract_token(authorization)
-    try:
-        decoded_token = auth.verify_id_token(id_token)
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=f"Token verification failed: {e}")
-
-    is_admin = decoded_token.get("admin") is True
-    return {"uid": decoded_token.get("uid"), "is_admin": is_admin, "claims": decoded_token}
-
-async def admin_required(user=Depends(get_current_user)):
-    """
-    - 依賴注入
-    - 只有 admin 才能通過
-    """
-    if not user["is_admin"]:
-        raise HTTPException(status_code=403, detail="Admin only")
-    return user
-
-@router.post("/admin")
-async def admin_route(user=Depends(admin_required)):
-    """
-    - 只允許 admin 訪問
-    - 回傳 admin 身份資訊
-    """
-    return {
-        "status": "verified",
-        "uid": user["uid"],
-        "admin": user["is_admin"],
-        "msg": "Welcome Admin!"
-    }
-
-#@router.post("/admin")
-async def admin_route(authorization: str = Header(...)):
-    print("Authorization header:", authorization)
-    try:
-        token = _extract_token(authorization)
-        decoded = auth.verify_id_token(token)
-
-        if not decoded.get("admin", False):
-            raise HTTPException(status_code=403, detail="Not admin")
-
-        return {"msg": "Welcome Admin!"}
-        '''
-        return {
-            "status": "verified",
-            "uid": uid,
-            "admin": is_admin,
-            "msg": "Welcome Admin!"
-        }
-        '''
-
-    except:
-        raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
-    
-def _extract_token(authorization: str) -> str:
-    try:
-        scheme, token = authorization.split()
-        if scheme.lower() != "bearer":
-            raise ValueError("Invalid auth scheme")
-        return token
-    except:
-        raise HTTPException(status_code=401, detail="Invalid Authorization header")

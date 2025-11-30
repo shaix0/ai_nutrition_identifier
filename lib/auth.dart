@@ -189,6 +189,15 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 20),
                 TextButton(
                   onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ResetPasswordPage()),
+                    );
+                  },
+                  child: const Text("忘記密碼？"),
+                ),
+                TextButton(
+                  onPressed: () {
                     setState(() {
                       emailController.clear();
                       passwordController.clear();
@@ -264,17 +273,17 @@ class _RegisterPageState extends State<RegisterPage> {
 
     try {
       // 普通註冊
-      //final userCredential = await FirebaseAuth.instance
-      //    .createUserWithEmailAndPassword(email: email, password: password);
+      final userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
 
       // 匿名轉永久帳號
-      final credential = EmailAuthProvider.credential(
+      /*final credential = EmailAuthProvider.credential(
         email: email,
         password: password,
       );
 
       final userCredential = await FirebaseAuth.instance.currentUser
-      ?.linkWithCredential(credential);
+      ?.linkWithCredential(credential);*/
 
       await userCredential?.user!.sendEmailVerification();
 
@@ -377,6 +386,94 @@ class _RegisterPageState extends State<RegisterPage> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ===================================================
+// 忘記密碼頁面
+// ===================================================
+class ResetPasswordPage extends StatefulWidget {
+  const ResetPasswordPage({super.key});
+
+  @override
+  State<ResetPasswordPage> createState() => _ResetPasswordPageState();
+}
+
+class _ResetPasswordPageState extends State<ResetPasswordPage> {
+  final TextEditingController emailController = TextEditingController();
+  bool isLoading = false;
+
+  Future<void> resetPassword() async {
+    final email = emailController.text.trim();
+
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("請輸入電子郵件")),
+      );
+      return;
+    }
+
+    setState(() => isLoading = true);
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+
+      setState(() => isLoading = false);
+
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("已寄出重設密碼信"),
+          content: Text("請至信箱確認：$email"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("OK"),
+            ),
+          ],
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      setState(() => isLoading = false);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("寄送失敗：${e.message}")));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("忘記密碼")),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              "重設密碼",
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 30),
+            TextField(
+              controller: emailController,
+              decoration: const InputDecoration(
+                labelText: "電子郵件",
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 30),
+            isLoading
+                ? const CircularProgressIndicator()
+                : ElevatedButton(
+                    onPressed: resetPassword,
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
+                    child: const Text("寄送重設密碼信"),
+                  )
+          ],
         ),
       ),
     );
