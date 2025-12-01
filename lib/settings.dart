@@ -15,13 +15,100 @@ class _SettingsPageState extends State<SettingsPage> {
   // UI-only states
   bool notifications = true;
   bool darkPreview = false;
-  String displayName = '';
   String preferredUnit = 'metric';
 
   String? gender;
   int? age;
   double? height;
   double? weight;
+
+  // 登出功能
+  Future<void> logout() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+
+      // 登出成功提示
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('已登出')),
+      );
+
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          content: const Text('登出成功'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+
+      // 回到登入頁
+      //Navigator.pushReplacementNamed(context, '/login');
+
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('登出失敗：$e')),
+      );
+    }
+  } 
+
+  // 修改密碼
+  void _confirmResetPassword() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    if (currentUser == null || currentUser.email == null) return;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          content: Text("系統將寄出密碼重設信件至：\n${currentUser.email}\n\n是否繼續？"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text("取消"),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text("確定"),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == true) {
+      // 使用者按了「確定」
+      _sendPasswordResetEmail();
+    }
+  }
+
+  void _sendPasswordResetEmail() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser?.email == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("無法取得使用者 Email")),
+      );
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance
+          .sendPasswordResetEmail(email: currentUser!.email!);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("已寄出密碼重設信至：${currentUser.email}")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("寄信失敗，請稍後再試")),
+      );
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -47,44 +134,77 @@ class _SettingsPageState extends State<SettingsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Profile Card
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: cs.surface,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: primaryLight,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: primaryDeep.withOpacity(0.2)),
-                      ),
-                      child: Icon(Icons.person, size: 38, color: primaryDeep),
+              StreamBuilder<User?>(
+                stream: FirebaseAuth.instance.authStateChanges(),
+                builder: (context, snapshot) {
+                  final user = snapshot.data;
+                  final isLoggedIn = user != null;
+
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: cs.surface,
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            ' user@example.com',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 72,
+                          height: 72,
+                          decoration: BoxDecoration(
+                            color: primaryLight,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: primaryDeep.withOpacity(0.2)),
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '✎修改密碼',
-                            style: TextStyle(color: cs.onSurface.withOpacity(0.5)),
+                          child: Icon(Icons.person, size: 38, color: primaryDeep),
+                        ),
+                        const SizedBox(width: 12),
+
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // 顯示 Email 或 未登入使用者
+                              Text(
+                                isLoggedIn ? user!.email! : "未登入使用者",
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                              ),
+
+                              const SizedBox(height: 6),
+
+                              if (isLoggedIn)
+                                GestureDetector(
+                                  onTap: _confirmResetPassword,
+                                  child: Text(
+                                    '✎ 修改密碼',
+                                    style: TextStyle(
+                                      color: cs.primary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+
+                              if (!isLoggedIn)
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.pushNamed(context, "/auth"); // ← 導向登入頁
+                                  },
+                                  child: Text(
+                                    '> 登入/註冊帳號',
+                                    style: TextStyle(
+                                      color: cs.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
 
               const SizedBox(height: 18),
@@ -162,19 +282,6 @@ class _SettingsPageState extends State<SettingsPage> {
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: primaryDeep,
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(12)),
-                        ),
-                      ),
-                      child: const Text('取消'),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
                     child: ElevatedButton(
                       onPressed: () {
                         ScaffoldMessenger.of(context)
@@ -192,32 +299,32 @@ class _SettingsPageState extends State<SettingsPage> {
               _infoRow('條款', '隱私權政策與使用條款'),
 
               const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: primaryDeep,
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(12)),
+              StreamBuilder<User?>(
+                stream: FirebaseAuth.instance.authStateChanges(),
+                builder: (context, snapshot) {
+                  final user = snapshot.data;
+
+                  // 尚未登入
+                  if (user == null) {
+                    return const SizedBox.shrink();
+                  }
+
+                  // 已登入
+                  return Column(
+                    children: [
+                      const SizedBox(height: 20),
+                      Center(
+                        child: TextButton(
+                          onPressed: () async {
+                            await logout();
+                          },
+                          child: const Text('登出'),
                         ),
                       ),
-                      child: const Text('取消'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(const SnackBar(content: Text('已儲存設定（模擬）')));
-                      },
-                      child: const Text('儲存設定'),
-                    ),
-                  ),
-                ],
-              ),
+                    ],
+                  );
+                },
+              )
             ],
           ),
         ),
@@ -260,3 +367,4 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 }
+

@@ -140,8 +140,37 @@ class _LoginPageState extends State<LoginPage> {
         
     } on FirebaseAuthException catch (e) {
       setState(() => isLoading = false);
+      //ScaffoldMessenger.of(context)
+      //    .showSnackBar(SnackBar(content: Text('登入失敗：${e.message}')));
+      String msg = "";
+
+      switch (e.code) {
+        case 'invalid-email':
+          msg = '您輸入的電子郵件地址格式不正確。';
+          break;
+        case 'user-disabled':
+          msg = '您的帳戶已被停用，請聯繫管理員。';
+          break;
+        case 'invalid-credential':
+          msg = '電子郵件或密碼錯誤。請檢查您的輸入或註冊新帳戶。';
+          break;
+        case 'wrong-password':
+          msg = '密碼錯誤。請檢查您的密碼。';
+          break;
+        case 'too-many-requests':
+          msg = '登入嘗試次數過多，請稍後再試。';
+          break;
+        case 'network-request-failed':
+          msg = '網路連線錯誤，請檢查您的網路設定。';
+          break;
+        default:
+          // 對於其他未明確處理的錯誤，顯示通用訊息或原始錯誤訊息
+          msg = '登入失敗：${e.message}';
+          break;
+      }
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('登入失敗：${e.message}')));
+          .showSnackBar(SnackBar(content: Text('登入失敗：$msg')));
+      print('登入失敗：${e.code} - ${e.message}');
     }
   }
 
@@ -166,6 +195,8 @@ class _LoginPageState extends State<LoginPage> {
                     labelText: '電子郵件',
                     border: OutlineInputBorder(),
                   ),
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next, // 按 enter 跳到密碼欄
                 ),
                 const SizedBox(height: 15),
                 TextField(
@@ -175,6 +206,8 @@ class _LoginPageState extends State<LoginPage> {
                     labelText: '密碼',
                     border: OutlineInputBorder(),
                   ),
+                  textInputAction: TextInputAction.done, // Enter 觸發 onSubmitted
+                  onSubmitted: (_) => login(), //  Enter 直接登入
                 ),
                 const SizedBox(height: 30),
                 isLoading
@@ -316,8 +349,31 @@ class _RegisterPageState extends State<RegisterPage> {
       );
     } on FirebaseAuthException catch (e) {
       setState(() => isLoading = false);
+      //ScaffoldMessenger.of(context)
+      //    .showSnackBar(SnackBar(content: Text('註冊失敗：${e.message}')));
+      String msg = "";
+
+      switch (e.code) {
+        case 'email-already-exists':
+          msg = '您提供的電子郵件地址已被使用。請嘗試使用其他電子郵件。';
+          break;
+        case 'invalid-email':
+          msg = '您輸入的電子郵件地址格式不正確。請檢查並重新輸入。';
+          break;
+        case 'invalid-password':
+          msg = '密碼無效。密碼必須至少包含六個字元。';
+          break;
+        case 'insufficient-permission':
+          msg = '您的帳戶沒有足夠的權限執行此操作。';
+          break;
+        default:
+          // 如果是其他未處理的錯誤，可以使用原始錯誤訊息或通用訊息
+          msg = '註冊失敗：${e.message}';
+          break;
+      }
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('註冊失敗：${e.message}')));
+        .showSnackBar(SnackBar(content: Text('註冊失敗：${e.message}')));
+      print('註冊失敗：${e.code} - ${e.message}');
     }
   }
 
