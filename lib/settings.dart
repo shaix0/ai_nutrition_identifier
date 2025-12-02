@@ -13,9 +13,12 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   // UI-only states
-  bool notifications = true;
-  bool darkPreview = false;
-  String preferredUnit = 'metric';
+  //bool notifications = true;
+  //bool darkPreview = false;
+  //String preferredUnit = 'metric';
+  final TextEditingController ageController = TextEditingController();
+  final TextEditingController heightController = TextEditingController();
+  final TextEditingController weightController = TextEditingController();
 
   String? gender;
   int? age;
@@ -45,11 +48,16 @@ class _SettingsPageState extends State<SettingsPage> {
       if (snapshot.exists) {
         final data = snapshot.data()!;
         setState(() {
-          // 只初始化未輸入的欄位，保留本地 UI 覆蓋資料
           gender ??= data['gender'];
+
           age ??= data['age'] != null ? (data['age'] as num).toInt() : null;
+          if (age != null) ageController.text = age.toString();
+
           height ??= data['height'] != null ? (data['height'] as num).toDouble() : null;
+          if (height != null) heightController.text = height.toString();
+
           weight ??= data['weight'] != null ? (data['weight'] as num).toDouble() : null;
+          if (weight != null) weightController.text = weight.toString();
         });
       }
     } catch (e) {
@@ -299,29 +307,25 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
 
                     // 年齡
+                    const SizedBox(height: 16),
                     _sectionLabel('年齡'),
                     TextField(
-                      controller: TextEditingController(text: age?.toString()),
+                      controller: ageController,
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      decoration: InputDecoration(
-                        hintText: '請輸入年齡',
-                      ),
+                      decoration: const InputDecoration(hintText: '請輸入年齡'),
+                      onChanged: (v) {age = int.tryParse(v);},
                     ),
 
-                    const SizedBox(height: 16),
-
                     // 身高 (cm)
+                    const SizedBox(height: 16),
                     _sectionLabel('身高 (cm)'),
                     TextField(
-                      controller: TextEditingController(text: height?.toString()),
+                      controller: heightController,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                      ],
-                      decoration: InputDecoration(
-                        hintText: '請輸入身高',
-                      ),
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r"[0-9.]"))],
+                      decoration: InputDecoration(hintText: '請輸入身高'),
+                      onChanged: (v) {height = double.tryParse(v);},
                     ),
 
                     const SizedBox(height: 16),
@@ -329,14 +333,11 @@ class _SettingsPageState extends State<SettingsPage> {
                     // 體重 (kg)
                     _sectionLabel('體重 (kg)'),
                     TextField(
-                      controller: TextEditingController(text: weight?.toString()),
+                      controller: weightController,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                      ],
-                      decoration: InputDecoration(
-                        hintText: '請輸入體重',
-                      ),
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r"[0-9.]"))],
+                      decoration: const InputDecoration(hintText: '請輸入體重'),
+                      onChanged: (v) {weight = double.tryParse(v);},
                     ),
                   ],
                 ),
