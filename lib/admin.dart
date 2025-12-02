@@ -16,6 +16,11 @@ class _AdminPageState extends State<AdminPage> {
   String? adminEmail;
   List<dynamic> users = [];
 
+  static const apiBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://localhost:8000',
+  );
+
   @override
   void initState() {
     super.initState();
@@ -36,7 +41,7 @@ class _AdminPageState extends State<AdminPage> {
     final token = await user.getIdToken();
 
     final response = await http.get(
-      Uri.parse("http://127.0.0.1:8000/admin/verify_admin"),
+      Uri.parse("$apiBaseUrl/admin/verify_admin"),
       headers: {"Authorization": "Bearer $token"},
     );
 
@@ -54,7 +59,7 @@ class _AdminPageState extends State<AdminPage> {
 
     final token = await user.getIdToken();
     final response = await http.get(
-      Uri.parse("http://127.0.0.1:8000/admin/get_users"),
+      Uri.parse("$apiBaseUrl/admin/get_users"),
       headers: {"Authorization": "Bearer $token"},
     );
 
@@ -239,7 +244,7 @@ class _AdminPageState extends State<AdminPage> {
       return;
     }
 
-    final url = Uri.parse("http://127.0.0.1:8000/admin/get_user/$uid");
+    final url = Uri.parse("$apiBaseUrl/admin/get_user/$uid");
 
     try {
       final resp = await http.get(

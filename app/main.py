@@ -1,5 +1,7 @@
 # main.py
 
+#import os
+#from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, Header, HTTPException
 import firebase_admin
 from firebase_admin import auth, credentials
@@ -8,6 +10,8 @@ from firebase_admin import firestore_async
 from app.routes.admin import router as admin_router
 from app.routes.settings import router as settings_router
 
+#API_BASE_URL = os.getenv("API_BASE_URL")
+
 # 初始化 Firebase Admin SDK
 if not firebase_admin._apps:
     cred = credentials.Certificate("config/serviceAccountKey.json")
@@ -15,11 +19,6 @@ if not firebase_admin._apps:
     db = firestore_async.client()
 
 app = FastAPI()
-
-origins = [
-    "http://localhost",
-    "http://localhost:8080",
-]
 
 from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(

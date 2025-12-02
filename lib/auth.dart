@@ -1,4 +1,4 @@
-// lib/login.dart
+// lib/auth.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 
 
 //final user = FirebaseAuth.instance.currentUser;
-
+/*
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
@@ -28,7 +28,7 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
+*/
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
 

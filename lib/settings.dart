@@ -1,8 +1,7 @@
 // settings.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
-final user = FirebaseAuth.instance.currentUser;
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -22,12 +21,54 @@ class _SettingsPageState extends State<SettingsPage> {
   double? height;
   double? weight;
 
+  DocumentReference<Map<String, dynamic>>? userDoc;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupUserDoc();
+  }
+
+  Future<void> _setupUserDoc() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      userDoc = FirebaseFirestore.instance.collection('users').doc(currentUser.uid);
+      await _loadUserData();
+    }
+  }
+
+  Future<void> _loadUserData() async {
+    if (userDoc == null) return;
+    try {
+      final snapshot = await userDoc!.get();
+      if (snapshot.exists) {
+        final data = snapshot.data()!;
+        setState(() {
+          // 只初始化未輸入的欄位，保留本地 UI 覆蓋資料
+          gender ??= data['gender'];
+          age ??= data['age'] != null ? (data['age'] as num).toInt() : null;
+          height ??= data['height'] != null ? (data['height'] as num).toDouble() : null;
+          weight ??= data['weight'] != null ? (data['weight'] as num).toDouble() : null;
+        });
+      }
+    } catch (e) {
+      print('讀取個人資料失敗: $e');
+    }
+  }
+
   // 登出功能
   Future<void> logout() async {
     try {
       await FirebaseAuth.instance.signOut();
 
-      // 登出成功提示
+      // 清空 UI 狀態
+      setState(() {
+        gender = null;
+        age = null;
+        height = null;
+        weight = null;
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('已登出')),
       );
@@ -45,15 +86,12 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       );
 
-      // 回到登入頁
-      //Navigator.pushReplacementNamed(context, '/login');
-
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('登出失敗：$e')),
       );
     }
-  } 
+  }
 
   // 修改密碼
   void _confirmResetPassword() async {
@@ -81,7 +119,6 @@ class _SettingsPageState extends State<SettingsPage> {
     );
 
     if (result == true) {
-      // 使用者按了「確定」
       _sendPasswordResetEmail();
     }
   }
@@ -96,8 +133,7 @@ class _SettingsPageState extends State<SettingsPage> {
     }
 
     try {
-      await FirebaseAuth.instance
-          .sendPasswordResetEmail(email: currentUser!.email!);
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: currentUser!.email!);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("已寄出密碼重設信至：${currentUser.email}")),
@@ -109,12 +145,39 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _saveUserData() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('尚未登入，無法儲存資料')),
+      );
+      return;
+    }
+
+    userDoc ??= FirebaseFirestore.instance.collection('users').doc(currentUser.uid);
+
+    try {
+      await userDoc!.set({
+        'gender': gender,
+        'age': age,
+        'height': height,
+        'weight': weight,
+      }, SetOptions(merge: true));
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('已儲存健康資料')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('儲存失敗: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final primaryDeep = cs.primary;
-    //final primaryLight = cs.surface;
     final primaryLight = cs.background;
 
     return Scaffold(
@@ -165,14 +228,11 @@ class _SettingsPageState extends State<SettingsPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // 顯示 Email 或 未登入使用者
                               Text(
                                 isLoggedIn ? user!.email! : "未登入使用者",
                                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                               ),
-
                               const SizedBox(height: 6),
-
                               if (isLoggedIn)
                                 GestureDetector(
                                   onTap: _confirmResetPassword,
@@ -184,11 +244,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                     ),
                                   ),
                                 ),
-
                               if (!isLoggedIn)
                                 GestureDetector(
                                   onTap: () {
-                                    Navigator.pushNamed(context, "/auth"); // ← 導向登入頁
+                                    Navigator.pushNamed(context, "/auth");
                                   },
                                   child: Text(
                                     '> 登入/註冊帳號',
@@ -208,7 +267,6 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
 
               const SizedBox(height: 18),
-
               const Text(
                 '個人健康資料',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -250,12 +308,12 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
 
                     const SizedBox(height: 16),
-
                     _sectionLabel('年齡'),
                     TextField(
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(hintText: '請輸入年齡'),
                       onChanged: (v) => setState(() => age = int.tryParse(v)),
+                      controller: TextEditingController(text: age?.toString()),
                     ),
                     const SizedBox(height: 16),
 
@@ -264,6 +322,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(hintText: '請輸入身高'),
                       onChanged: (v) => setState(() => height = double.tryParse(v)),
+                      controller: TextEditingController(text: height?.toString()),
                     ),
                     const SizedBox(height: 16),
 
@@ -272,21 +331,18 @@ class _SettingsPageState extends State<SettingsPage> {
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(hintText: '請輸入體重'),
                       onChanged: (v) => setState(() => weight = double.tryParse(v)),
+                      controller: TextEditingController(text: weight?.toString()),
                     ),
                   ],
                 ),
               ),
 
               const SizedBox(height: 30),
-
               Row(
                 children: [
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(const SnackBar(content: Text('已儲存健康資料（示範）')));
-                      },
+                      onPressed: _saveUserData,
                       child: const Text('儲存設定'),
                     ),
                   ),
@@ -303,28 +359,21 @@ class _SettingsPageState extends State<SettingsPage> {
                 stream: FirebaseAuth.instance.authStateChanges(),
                 builder: (context, snapshot) {
                   final user = snapshot.data;
+                  if (user == null) return const SizedBox.shrink();
 
-                  // 尚未登入
-                  if (user == null) {
-                    return const SizedBox.shrink();
-                  }
-
-                  // 已登入
                   return Column(
                     children: [
                       const SizedBox(height: 20),
                       Center(
                         child: TextButton(
-                          onPressed: () async {
-                            await logout();
-                          },
+                          onPressed: logout,
                           child: const Text('登出'),
                         ),
                       ),
                     ],
                   );
                 },
-              )
+              ),
             ],
           ),
         ),
@@ -367,4 +416,3 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 }
-
