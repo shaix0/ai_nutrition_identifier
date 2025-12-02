@@ -1,5 +1,6 @@
 // settings.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -177,19 +178,9 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final primaryDeep = cs.primary;
-    final primaryLight = cs.background;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('設定'),
-        actions: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.close),
-          )
-        ],
-      ),
+      appBar: AppBar(title: const Text('設定')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
@@ -216,11 +207,11 @@ class _SettingsPageState extends State<SettingsPage> {
                           width: 72,
                           height: 72,
                           decoration: BoxDecoration(
-                            color: primaryLight,
+                            color: cs.background,
                             shape: BoxShape.circle,
-                            border: Border.all(color: primaryDeep.withOpacity(0.2)),
+                            border: Border.all(color: cs.primary.withOpacity(0.2)),
                           ),
-                          child: Icon(Icons.person, size: 38, color: primaryDeep),
+                          child: Icon(Icons.person, size: 38, color: cs.primary),
                         ),
                         const SizedBox(width: 12),
 
@@ -290,7 +281,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             groupValue: gender,
                             onChanged: (v) => setState(() => gender = v),
                             title: const Text('男'),
-                            activeColor: primaryDeep,
+                            activeColor: cs.primary,
                             contentPadding: EdgeInsets.zero,
                           ),
                         ),
@@ -300,38 +291,52 @@ class _SettingsPageState extends State<SettingsPage> {
                             groupValue: gender,
                             onChanged: (v) => setState(() => gender = v),
                             title: const Text('女'),
-                            activeColor: primaryDeep,
+                            activeColor: cs.primary,
                             contentPadding: EdgeInsets.zero,
                           ),
                         ),
                       ],
                     ),
 
-                    const SizedBox(height: 16),
+                    // 年齡
                     _sectionLabel('年齡'),
                     TextField(
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(hintText: '請輸入年齡'),
-                      onChanged: (v) => setState(() => age = int.tryParse(v)),
                       controller: TextEditingController(text: age?.toString()),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      decoration: InputDecoration(
+                        hintText: '請輸入年齡',
+                      ),
                     ),
+
                     const SizedBox(height: 16),
 
+                    // 身高 (cm)
                     _sectionLabel('身高 (cm)'),
                     TextField(
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(hintText: '請輸入身高'),
-                      onChanged: (v) => setState(() => height = double.tryParse(v)),
                       controller: TextEditingController(text: height?.toString()),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                      ],
+                      decoration: InputDecoration(
+                        hintText: '請輸入身高',
+                      ),
                     ),
+
                     const SizedBox(height: 16),
 
+                    // 體重 (kg)
                     _sectionLabel('體重 (kg)'),
                     TextField(
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(hintText: '請輸入體重'),
-                      onChanged: (v) => setState(() => weight = double.tryParse(v)),
                       controller: TextEditingController(text: weight?.toString()),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                      ],
+                      decoration: InputDecoration(
+                        hintText: '請輸入體重',
+                      ),
                     ),
                   ],
                 ),

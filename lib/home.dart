@@ -27,7 +27,7 @@ class DashboardPage extends StatelessWidget {
         actions: [
           IconButton(
             onPressed: () {
-              Navigator.pushReplacementNamed(context, '/settings');// 前往設定頁
+              Navigator.pushNamed(context, '/settings');// 前往設定頁
             },
             icon: const Icon(Icons.settings),
           ),

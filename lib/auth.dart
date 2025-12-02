@@ -124,8 +124,8 @@ class _LoginPageState extends State<LoginPage> {
         ),
       );
 
-      final token = await FirebaseAuth.instance.currentUser?.getIdToken(true);
-      print("TOKEN=$token");
+      //final token = await FirebaseAuth.instance.currentUser?.getIdToken(true);
+      //print("TOKEN=$token");
       /*await http.get(
         Uri.parse("http://127.0.0.1:8000/admin"),
         headers: {"Authorization": "Bearer $token"},
