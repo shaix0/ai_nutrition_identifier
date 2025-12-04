@@ -1,0 +1,4 @@
+fastapi
+pydantic # FastAPI 依賴 pydantic 進行資料模型和驗證
+uvicorn # 常用於運行 FastAPI 服務器
+firebase-admin
