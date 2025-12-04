@@ -93,10 +93,8 @@ class _AdminPageState extends State<AdminPage> {
           email.contains(keyword) ||
           uid.contains(keyword);
 
-      // 篩選 admin
+      // 篩選 admin、匿名
       bool matchAdmin = !filterAdmin || (u["admin"] == true);
-
-      // 篩選匿名
       bool matchAnon = !filterAnonymous || (u["email"] == null);
 
       return matchKeyword && matchAdmin && matchAnon;
@@ -105,8 +103,37 @@ class _AdminPageState extends State<AdminPage> {
     setState(() {});
   }
 
-  // 🔵 刪除使用者
+  // 🔴 刪除使用者
   Future<void> deleteUser(String uid) async {
+    // 🔵 確認對話框
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("確認刪除"),
+          content: Text("確定要刪除使用者：$uid 嗎？此動作無法復原。"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text("取消"),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(
+                backgroundColor: const Color.fromARGB(255, 233, 98, 88),
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text("刪除"),
+            ),
+          ],
+        );
+      },
+    );
+
+    // 使用者取消
+    if (confirm != true) return;
+
+    // ---- 真正開始刪除 ----
     final token = await FirebaseAuth.instance.currentUser?.getIdToken(true);
     if (token == null) return;
 
@@ -117,13 +144,13 @@ class _AdminPageState extends State<AdminPage> {
 
     if (resp.statusCode == 200) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("已刪除使用者 $uid")),
+        SnackBar(content: Text("已刪除使用者：$uid")),
       );
       _getUsers();
       setState(() => selectedUser = null);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("刪除失敗")),
+        const SnackBar(content: Text("刪除失敗")),
       );
     }
   }
@@ -143,58 +170,44 @@ class _AdminPageState extends State<AdminPage> {
 
     final cs = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      backgroundColor: cs.primary,
-      body: Row(
-        children: [
-          // 左側 Sidebar —— 保持不變
-          _buildSidebar(cs),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isSmall = constraints.maxWidth < 900; // 🔵 判斷是否小螢幕
 
-          // 右側使用者列表 + 詳細資料
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: cs.surface,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSearchBar(cs),      // 🔵 搜尋 + 過濾
-                  const SizedBox(height: 12),
+        return Scaffold(
+          backgroundColor: cs.primary,
 
-                  Expanded(
-                    child: Row(
-                      children: [
-                        // 🔵 左：搜尋結果列表
-                        Expanded(
-                          flex: 2,
-                          child: _buildUserList(cs),
-                        ),
-
-                        const SizedBox(width: 16),
-
-                        // 🔵 右：詳細資料
-                        Expanded(
-                          flex: 3,
-                          child: _buildUserDetailPanel(cs),
-                        ),
-                      ],
+          // 🔵 小螢幕才顯示 Drawer（Sidebar 放進 Drawer）
+          appBar: isSmall
+              ? AppBar(
+                  title: const Text("管理後台"),
+                  leading: Builder(
+                    builder: (context) => IconButton(
+                      icon: const Icon(Icons.menu),
+                      onPressed: () => Scaffold.of(context).openDrawer(),
                     ),
-                  )
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+                  ),
+                )
+              : null,
+
+          drawer: isSmall
+              ? Drawer(
+                  child: SafeArea(
+                    child: _buildSidebar(cs), // 🔵 小螢幕放進 Drawer
+                  ),
+                )
+              : null,
+
+          body: isSmall
+              ? _buildSmallScreen(cs)   // 🔵 小螢幕排版
+              : _buildLargeScreen(cs), // 🔵 大螢幕排版
+        );
+      },
     );
   }
 
   // ---------------------------
-  // 左側 Sidebar（你原本的）
+  // 左側 Sidebar
   // ---------------------------
   Widget _buildSidebar(ColorScheme cs) {
     return SizedBox(
@@ -222,7 +235,8 @@ class _AdminPageState extends State<AdminPage> {
               ),
             ),
 
-            ElevatedButton.icon(
+            // 固定：登出按鈕（不會捲動，貼在底部）
+            TextButton.icon(
               onPressed: () async {
                 await FirebaseAuth.instance.signOut();
                 if (mounted) {
@@ -231,6 +245,7 @@ class _AdminPageState extends State<AdminPage> {
               },
               icon: const Icon(Icons.logout),
               label: const Text("登出"),
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
             ),
           ],
         ),
@@ -272,49 +287,56 @@ class _AdminPageState extends State<AdminPage> {
   // 搜尋 + 過濾
   // ---------------------------
   Widget _buildSearchBar(ColorScheme cs) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 搜尋框
-        Expanded(
-          child: TextField(
-            controller: searchController,
-            onChanged: (_) => _applyFilters(),
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: cs.surfaceVariant,
-              hintText: "搜尋 Email / UID",
-              prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        // 搜尋欄
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: searchController,
+                onChanged: (_) => _applyFilters(),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: cs.surfaceVariant,
+                  hintText: "搜尋 Email / UID",
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
+        const SizedBox(height: 8),
 
-        const SizedBox(width: 12),
-
-        // 🔵 篩選：Admin
-        FilterChip(
-          label: const Text("Admin"),
-          selected: filterAdmin,
-          onSelected: (v) {
-            setState(() {
-              filterAdmin = v;
-              _applyFilters();
-            });
-          },
-        ),
-
-        const SizedBox(width: 8),
-
-        // 🔵 篩選：匿名
-        FilterChip(
-          label: const Text("匿名"),
-          selected: filterAnonymous,
-          onSelected: (v) {
-            setState(() {
-              filterAnonymous = v;
-              _applyFilters();
-            });
-          },
+        // 篩選條件自動換行
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            FilterChip(
+              label: const Text("管理員"),
+              selected: filterAdmin,
+              onSelected: (v) {
+                setState(() {
+                  filterAdmin = v;
+                  _applyFilters();
+                });
+              },
+            ),
+            FilterChip(
+              label: const Text("匿名用戶"),
+              selected: filterAnonymous,
+              onSelected: (v) {
+                setState(() {
+                  filterAnonymous = v;
+                  _applyFilters();
+                });
+              },
+            ),
+          ],
         ),
       ],
     );
@@ -344,7 +366,7 @@ class _AdminPageState extends State<AdminPage> {
                 style: TextStyle(color: cs.onPrimary),
               ),
             ),
-            title: Text(u["email"] ?? "(匿名)"),
+            title: Text(u["email"] ?? "匿名用戶"),
             subtitle: Text("UID: ${u["uid"]}"),
             trailing: Icon(Icons.chevron_right, color: cs.primary),
             onTap: () => _showUserDetail(context, u["uid"]), // 🔴 詳情顯示於右側
@@ -399,13 +421,13 @@ class _AdminPageState extends State<AdminPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("詳細資訊", style: Theme.of(context).textTheme.titleLarge),
+          Text("詳細資訊", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
 
-          Text("Email: ${u["email"] ?? "null"}"),
-          Text("UID: ${u["uid"]}"),
-          Text("Admin: ${u["admin"]}"),
-          Text("Email 驗證: ${u["email_verified"]}"),
+          Text("Email：${u["email"] ?? "null"}"),
+          Text("UID：${u["uid"]}"),
+          Text("Admin：${u["admin"]}"),
+          Text("Email 驗證：${u["email_verified"]}"),
           Text(
             "註冊時間：${meta["creation_time"] != null
                 ? DateFormat('yyyy/MM/dd').format(
@@ -424,11 +446,11 @@ class _AdminPageState extends State<AdminPage> {
           const Spacer(),
 
           // 🔴 刪除按鈕
-          ElevatedButton.icon(
+          TextButton.icon(
             icon: const Icon(Icons.delete),
             label: const Text("刪除使用者"),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+            style: TextButton.styleFrom(
+              backgroundColor: const Color.fromARGB(255, 233, 98, 88),
               foregroundColor: Colors.white,
             ),
             onPressed: () => deleteUser(u["uid"]),
@@ -470,4 +492,65 @@ class _AdminPageState extends State<AdminPage> {
       ),
     );
   }
+
+  Widget _buildSmallScreen(ColorScheme cs) {
+    return Container(
+      margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          _buildSearchBar(cs),
+          const SizedBox(height: 12),
+
+          Expanded(child: _buildUserList(cs)),
+          const SizedBox(height: 12),
+
+          Container(
+            height: 260,
+            child: _buildUserDetailPanel(cs),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLargeScreen(ColorScheme cs) {
+    return Row(
+      children: [
+        _buildSidebar(cs), // 左側 Sidebar
+
+        Expanded(
+          child: Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: cs.surface,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                _buildSearchBar(cs),
+                const SizedBox(height: 12),
+
+                Expanded(
+                  child: Row(
+                    children: [
+                      Expanded(flex: 2, child: _buildUserList(cs)),
+                      const SizedBox(width: 16),
+                      Expanded(flex: 3, child: _buildUserDetailPanel(cs)),
+                    ],
+                  ),
+                )
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
 }
