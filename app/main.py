@@ -4,8 +4,7 @@
 #from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, Header, HTTPException
 import firebase_admin
-from firebase_admin import auth, credentials
-from firebase_admin import firestore_async
+from firebase_admin import auth, credentials, firestore_async
 
 from app.routes.admin import router as admin_router
 from app.routes.settings import router as settings_router
