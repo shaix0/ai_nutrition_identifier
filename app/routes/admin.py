@@ -1,5 +1,11 @@
 from fastapi import FastAPI, APIRouter, Header, HTTPException, Depends
 from firebase_admin import auth, credentials
+from pydantic import BaseModel
+
+class CreateUserRequest(BaseModel):
+    email: str
+    password: str
+
 
 router = APIRouter()
 
@@ -177,16 +183,18 @@ async def search_users(q: str, user=Depends(admin_required)
         raise HTTPException(status_code=500, detail=f"Search failed: {e}")
 
 @router.post("/create_user")
-async def create_user(email: str, password: str, user=Depends(admin_required)):
+async def create_user(data: CreateUserRequest, user=Depends(admin_required)):
     try:
         user_record = auth.create_user(
-            email=email,
-            password=password
+            email=data.email,
+            password=data.password
         )
         return {
             "uid": user_record.uid,
-            "email": user_record.email
+            "email": user_record.email,
         }
+    except auth.EmailAlreadyExistsError:
+        raise HTTPException(status_code=400, detail="Email already exists")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create users: {e}")
     
