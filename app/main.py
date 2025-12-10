@@ -13,7 +13,8 @@ from app.routes.settings import router as settings_router
 
 # 初始化 Firebase Admin SDK
 if not firebase_admin._apps:
-    cred = credentials.Certificate("config/serviceAccountKey.json")
+    #cred = credentials.Certificate("config/serviceAccountKey.json")
+    cred = credentials.Certificate("/etc/secrets/serviceAccountKey.json")
     default_app = firebase_admin.initialize_app(cred)
     db = firestore_async.client()
 
